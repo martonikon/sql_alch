@@ -1,1 +1,72 @@
-
+import pytest
+from src.sql_alchemy import engine, session, Device, Layer, Device_Layer
+from sqlalchemy import inspect
+ 
+ 
+@pytest.fixture
+def setup_inspector():
+    global tables
+    inspector = inspect(engine)
+    tables = inspector.get_table_names()
+ 
+@pytest.fixture
+def device_data():
+    device = Device(name='nfet')
+    session.add(device)
+    session.commit()
+    return {'device': device.name,
+            'device_id': device.id}
+ 
+@pytest.fixture
+def layer_data():
+    layer = Layer(name='nfet_layer')
+    session.add(layer)
+    session.commit()
+    return {'layer': layer.name,
+            'layer_id': layer.id}
+ 
+@pytest.fixture
+def device_layer_data():
+    device = Device(name='dgnfet')
+    layer = Layer(name='dgnfet_layer')
+    session.add_all([device, layer])
+    session.commit()
+    return {'device': device.name,
+            'layer': layer.name,
+            'device_id': device.id,
+            'layer_id': layer.id}
+ 
+ 
+def test_device_table_exists(setup_inspector):
+    assert 'device' in tables
+ 
+ 
+def test_layer_table_exists(setup_inspector):
+    assert 'layer' in tables
+ 
+ 
+def test_device_layer_table_exists(setup_inspector):
+    assert 'device_layer' in tables
+ 
+ 
+def test_nfet_in_device_table(device_data):
+    device = session.query(Device).filter_by(id=1).one().name
+    assert device == device_data['device']
+ 
+ 
+def test_nfet_layer_in_layer_table(layer_data):
+    layer = session.query(Layer).filter_by(id=1).one().name
+    assert layer == layer_data['layer']
+ 
+ 
+def test_ids_in_device_layer_table(device_layer_data):
+    nfet_id = session.query(Device).filter_by(name='nfet').one().id
+    nfet_layer_id = session.query(Layer).filter_by(name='nfet_layer').one().id
+ 
+    device_layer = Device_Layer(device_id=nfet_id, layer_id=nfet_layer_id)
+    session.add(device_layer)
+    session.commit()
+ 
+    assert device_layer.device_id == nfet_id
+    assert device_layer.layer_id == nfet_layer_id
+ 
